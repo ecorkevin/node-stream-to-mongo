@@ -14,7 +14,6 @@ function StreamToMongo(options) {
   this.options = options;
 }
 
-
 StreamToMongo.prototype._write = function (obj, encoding, done) {
   var self = this;
   if (!this.db) {
@@ -25,9 +24,21 @@ StreamToMongo.prototype._write = function (obj, encoding, done) {
         self.db.close();
       });
       self.collection = db.collection(self.options.collection);
-      self.collection.insert(obj, { w: 1 }, done);
+      self.collection.insert(obj, { w: 1 }, function(err, res) {
+        if(err && err.message.match(/duplicate/)) {
+          self.emit('warning', err);
+          return done();
+        }
+        return done(err, res);
+      });
     });
   } else {
-    self.collection.insert(obj, { w: 1 }, done);
+    self.collection.insert(obj, { w: 1 }, function(err, res) {
+      if(err && err.message.match(/duplicate/)) {
+        self.emit('warning', err);
+        return done();
+      }
+      return done(err, res);
+    });
   }
 };
